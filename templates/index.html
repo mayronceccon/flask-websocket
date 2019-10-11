@@ -1,48 +1,71 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-    <title>Flask-SocketIO Test</title>
-    <script src="//code.jquery.com/jquery-1.12.4.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
-    <script type="text/javascript" charset="utf-8">
-        $(document).ready(function() {
+    <title>Flask-SocketIO</title>
+    <style>
+    [v-cloak] > * { display:none }
+    [v-cloak]::before { content: "loading..." }
+    </style>
+    <script src="/static/js/jquery-v3.4.1.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="/static/js/socket.io-v2.3.0.js"></script>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <h1>Flask-SocketIO</h1>
+        {{ tasks }}
+        <form
+            action='#'
+            method='post'
+            @submit.prevent="send()"
+        >
+            <input v-model="message" type="text">
+            <input type="submit" value="Send">
+        </form>
+
+        {{ message }}
+
+        <a href="#" v-on:click="disconnect">Disconnect</a>
+    </div>
+</body>
+</html>
+    <script>
+    var app = new Vue({
+    el: '#app',
+        data: function() {
+            return {
+                socket: null,
+                tasks: [],
+                message: 'Mensagem',
+            }
+        },
+        created: function() {
+            let self = this;
             let namespace = '/test';
-            var socket = io(namespace);
-            
-            socket.on('connect', function() {
+            this.socket = io(namespace);
+
+            this.socket.on('connect', function() {
                 // socket.emit('my_event', {data: 'I\'m connected!'});
             });
             
-            socket.on('my_response', function(msg, cb) {
+            this.socket.on('my_response', function(msg, cb) {
                 //$('#log').append('<br>' + $('<div/>').text('Received #' + msg.count + ': ' + msg.data).html());
-                console.log(msg);
-                if (cb)
+                console.log(self.tasks);
+                self.tasks = JSON.parse(msg.data);
+                if (cb) {
                     cb();
+                }
             });
-           
-            $('form#emit').submit(function(event) {
-                socket.emit('my_event', {data: $('#emit_data').val()});
+        },
+        methods: {
+            send () {
+                this.socket.emit('my_event', {data: this.message});
                 return false;
-            });
-            
-            $('form#disconnect').submit(function(event) {
-                socket.emit('disconnect_request');
+            },
+            disconnect () {
+                this.socket.emit('disconnect_request');
                 return false;
-            });
-        });
-    </script>
-</head>
-<body>
-    <h1>Flask-SocketIO Test</h1>
-    <h2>Send:</h2>
-    <form id="emit" method="POST" action='#'>
-        <input type="text" name="emit_data" id="emit_data" placeholder="Message">
-        <input type="submit" value="Echo">
-    </form>    
-    <form id="disconnect" method="POST" action="#">
-        <input type="submit" value="Disconnect">
-    </form>
-    <h2>Receive:</h2>
-    <div id="log"></div>
-</body>
-</html>
+            }
+        }
+    })
+</script>
