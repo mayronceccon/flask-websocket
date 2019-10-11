@@ -1,0 +1,4 @@
+/.venv/
+/.vscode/
+/flask_session/
+socket.sqlite
