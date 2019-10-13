@@ -50,8 +50,8 @@
             
             this.socket.on('my_response', function(msg, cb) {
                 //$('#log').append('<br>' + $('<div/>').text('Received #' + msg.count + ': ' + msg.data).html());
-                console.log(self.tasks);
                 self.tasks = JSON.parse(msg.data);
+                console.log(self.tasks);
                 if (cb) {
                     cb();
                 }

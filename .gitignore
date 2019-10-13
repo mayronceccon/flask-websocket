@@ -1,4 +1,6 @@
 /.venv/
 /.vscode/
 /flask_session/
+/__pycache__/
+*.pyc
 socket.sqlite

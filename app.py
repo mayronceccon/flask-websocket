@@ -1,104 +1,50 @@
-from flask import Flask, render_template, session,request, copy_current_request_context
-from flask_socketio import SocketIO, emit, join_room, disconnect
-from threading import Lock
-import sqlalchemy as db
-from sqlalchemy.pool import StaticPool
-import json
+from flask import render_template, jsonify, request
+from flask_cors import CORS
+from src.app import App
+from src.socketio import Socketio
+from src.status.views import StatusView
+from src.task.views import TaskView
 
-async_mode = None
+app = App.get_instance()
+socketio = Socketio.get_instance()
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app, async_mode=async_mode)
-thread = None
-thread_lock = Lock()
-
-engine = db.create_engine('sqlite:///socket.sqlite',
-    connect_args={'check_same_thread': False},
-    poolclass=StaticPool, 
-    echo=True
-)
-
-connection = engine.connect()
-metadata = db.MetaData()
-task = db.Table('task', metadata, autoload=True, autoload_with=engine)
-status = db.Table('status', metadata, autoload=True, autoload_with=engine)
-
-
-def background_thread():
-    """Example of how to send server generated events to clients."""
-    count = 0
-    while True:
-        socketio.sleep(10)
-        count += 1
-        # socketio.emit('my_response',
-        #               {'data': 'Server generated event', 'count': count},
-        #               namespace='/test')
+cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
+app.config['CORS_HEADERS'] = 'Content-Type'
 
 
 @app.route('/')
 def index():
     return render_template('index.html', async_mode=socketio.async_mode)
 
-@socketio.on('my_event', namespace='/test')
-def test_message(message):
-    session['receive_count'] = session.get('receive_count', 1) + 1
 
-    query = db.insert(task) 
-    values_list = [{
-        'text': message['data'], 
-        'description': message['data'], 
-        'status': 1,
-        'id': 1,
-    }]
-    connection.execute(query, values_list)
-
-    results = connection.execute(db.select([task])).fetchall()
-    results = json.dumps([(dict(row.items())) for row in results])
-
-    emit('my_response',
-        {
-            'data': results, 
-            'count': session['receive_count']
-        },
-        room='100'
-    )
-
-@socketio.on('connect', namespace='/test')
-def test_connect():
-    global thread
-    with thread_lock:
-        if thread is None:
-            thread = socketio.start_background_task(background_thread)
-    join_room('100')
-
-    results = connection.execute(db.select([task])).fetchall()
-    results = json.dumps([(dict(row.items())) for row in results])
-
-    session['receive_count'] = session.get('receive_count', 1) + 1
-    emit('my_response',
-        {
-            'data': results, 
-            'count': session['receive_count']
-        },
-        room='100'
-    )
+@app.route('/api/users/')
+def users():
+    users = [
+        {'id': 1, 'username': 'mayron.ceccon'}
+    ]
+    return jsonify(users)
 
 
-@socketio.on('disconnect', namespace='/test')
-def test_disconnect():
-    print('Client disconnected', request.sid)
+status_view = StatusView.as_view('status_view')
+app.add_url_rule(
+    '/api/status/', view_func=status_view, methods=['GET', 'POST']
+)
+app.add_url_rule(
+    '/api/status/<int:id>', view_func=status_view, methods=['GET']
+)
 
-@socketio.on('disconnect_request', namespace='/test')
-def disconnect_request():
-    @copy_current_request_context
-    def can_disconnect():
-        disconnect()
+task_view = TaskView.as_view('task_view')
+app.add_url_rule(
+    '/api/tasks/', view_func=task_view, methods=['GET', 'POST']
+)
+app.add_url_rule(
+    '/api/tasks/<int:id>', view_func=task_view, methods=['GET', 'PUT']
+)
 
-    session['receive_count'] = session.get('receive_count', 0) + 1   
-    emit('my_response',
-         {'data': 'Disconnected!', 'count': session['receive_count']},
-         callback=can_disconnect)
+
+# @app.errorhandler(404)
+# def page_not_found(error):
+#     return jsonify(['OPSSS...'])
 
 
 if __name__ == '__main__':
