@@ -19,5 +19,6 @@ class Socketio:
             async_mode = None
             Socketio.__instance = SocketIO(
                 App.get_instance(),
-                async_mode=async_mode
+                async_mode=async_mode,
+                cors_allowed_origins="*"
             )
