@@ -1,5 +1,4 @@
 from flask import render_template, jsonify, request
-from flask_cors import CORS
 from src.app import App
 from src.socketio import Socketio
 from src.status.views import StatusView
@@ -7,9 +6,6 @@ from src.task.views import TaskView
 
 app = App.get_instance()
 socketio = Socketio.get_instance()
-
-cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
-app.config['CORS_HEADERS'] = 'Content-Type'
 
 
 @app.route('/')
@@ -42,9 +38,9 @@ app.add_url_rule(
 )
 
 
-# @app.errorhandler(404)
-# def page_not_found(error):
-#     return jsonify(['OPSSS...'])
+@app.errorhandler(404)
+def page_not_found(error):
+    return jsonify(['OPSSSS 404'])
 
 
 if __name__ == '__main__':

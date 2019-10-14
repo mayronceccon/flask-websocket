@@ -1,4 +1,5 @@
 from flask import Flask
+from flask_cors import CORS
 
 
 class App:
@@ -15,5 +16,7 @@ class App:
             raise Exception("This class is a singleton!")
         else:
             app = Flask(__name__)
+            app.url_map.strict_slashes = False
             app.config['SECRET_KEY'] = 'secret!'
+            CORS(app)
             App.__instance = app
